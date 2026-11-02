@@ -1,0 +1,17 @@
+<resources>
+    <color name="color_primary">#3F51B5</color>
+    <color name="color_primary_dark">#303F9F</color>
+    <color name="color_accent">#FF4081</color>
+    <color name="bg_menu">#0B0E14</color>
+    <color name="card_bg">#161B22</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#B0B8C8</color>
+    <color name="accent_glow">#00E5FF</color>
+    <color name="button_play">#00C853</color>
+    <color name="button_play_pressed">#009624</color>
+    <color name="key_normal">#232A36</color>
+    <color name="key_pressed">#3F51B5</color>
+    <color name="key_touch">#00E5FF</color>
+    <color name="overlay_dim">#8A000000</color>
+    <color name="fps_color">#00FF88</color>
+</resources>

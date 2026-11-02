@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000">
+
+    <com.davimikeben.marioapk.GameSurfaceView
+        android:id="@+id/game_surface"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
+    <TextView
+        android:id="@+id/tv_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:text="Carregando…"
+        android:textColor="#00FF88"
+        android:textSize="18sp"
+        android:background="#8A000000"
+        android:padding="8dp"/>
+
+    <com.davimikeben.marioapk.FpsCounterOverlay
+        android:id="@+id/fps_overlay"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|left"
+        android:layout_margin="12dp"/>
+
+    <com.davimikeben.marioapk.VirtualKeyboardView
+        android:id="@+id/virtual_keyboard"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
+    <com.davimikeben.marioapk.FloatingMenuView
+        android:id="@+id/floating_menu"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
+</FrameLayout>

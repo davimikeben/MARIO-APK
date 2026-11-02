@@ -1,0 +1,22 @@
+# Android
+build/
+.gradle/
+local.properties
+*.iml
+.idea/
+.cxx/
+externalNativeBuild/
+*.keystore
+*.jks
+/app/src/main/jniLibs/
+/app/src/main/libs/
+
+# ROM de trabalho (não fazer commit do binário baixado)
+rom_analysis/
+
+# Agent / sandbox internos (não fazer commit)
+.cline-home/
+
+# OS
+.DS_Store
+Thumbs.db

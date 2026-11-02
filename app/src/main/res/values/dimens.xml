@@ -1,0 +1,10 @@
+<resources>
+    <dimen="menu_button_height">64dp</dimen>
+    <dimen="menu_button_margin">16dp</dimen>
+    <dimen="card_corner">16dp</dimen>
+    <dimen="key_size">72dp</dimen>
+    <dimen="key_small">52dp</dimen>
+    <dimen="fps_text_size">16sp</dimen>
+    <dimen="fps_margin">12dp</dimen>
+    <dimen="fab_size">56dp</dimen>
+</resources>

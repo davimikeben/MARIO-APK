@@ -1,0 +1,56 @@
+<resources>
+    <string name="app_name">Super Mario 64 APK</string>
+
+    <!-- Menu principal -->
+    <string name="menu_play">▶️ PLAY</string>
+    <string name="menu_keyboard">🎮 Configuração do teclado</string>
+    <string name="menu_performance">⚡ Desempenho</string>
+    <string name="menu_graphics">🎨 Gráficos</string>
+    <string name="menu_audio">🔊 Áudio</string>
+    <string name="menu_display">📱 Tela</string>
+    <string name="menu_monitor">📊 Monitoramento</string>
+    <string name="menu_save_settings">💾 Salvar configurações</string>
+    <string name="menu_restore_settings">🔄 Restaurar configurações</string>
+
+    <!-- Teclado virtual -->
+    <string name="kbd_dpad">🎮 Direcional</string>
+    <string name="kbd_dpad_desc">Direcional analógico / direcional (⬆️⬇️⬅️➡️)</string>
+    <string name="kbd_a">🅰️ Botão A</string>
+    <string name="kbd_a_desc">Ação principal / pular</string>
+    <string name="kbd_b">🅱️ Botão B</string>
+    <string name="kbd_b_desc">Ação secundária / atacar</string>
+    <string name="kbd_start">⏸️ Pausar</string>
+    <string name="kbd_start_desc">Pausar / abrir menu do jogo</string>
+    <string name="kbd_settings">⚙️ Configurações</string>
+    <string name="kbd_special">🎯 Ação especial</string>
+    <string name="kbd_z">Z Trigger</string>
+    <string name="kbd_z_desc">Agachar / mirar</string>
+    <string name="kbd_r">R Shoulder</string>
+    <string name="kbd_r_desc">Botão ombro direito</string>
+    <string name="kbd_c_up">⬆️ C-Button</string>
+    <string name="kbd_c_up_desc">Cima da câmera</string>
+    <string name="kbd_c_down">⬇️ C-Button</string>
+    <string name="kbd_c_down_desc">Baixo da câmera</string>
+    <string name="kbd_c_left">⬅️ C-Button</string>
+    <string name="kbd_c_left_desc">Esquerda da câmera</string>
+    <string name="kbd_c_right">➡️ C-Button</string>
+    <string name="kbd_c_right_desc">Direita da câmera</string>
+
+    <!-- FPS / monitor -->
+    <string name="fps_label">FPS</string>
+    <string name="fps_unit">fps</string>
+
+    <!-- Desempenho -->
+    <string name="perf_mode">Modo de desempenho</string>
+    <string name="perf_performance">Desempenho (fluidez)</string>
+    <string name="perf_balanced">Equilibrado</string>
+    <string name="perf_quality">Qualidade (imagem)</string>
+
+    <!-- Mensagens -->
+    <string name="rom_not_found">ROM não encontrada no APK.</string>
+    <string name="rom_loading">Carregando ROM integrada…</string>
+    <string name="rom_ok">ROM carregada com sucesso.</string>
+    <string name="error_title">Erro</string>
+    <string name="settings_saved">Configurações salvas.</string>
+    <string name="settings_restored">Configurações restauradas.</string>
+</resources>
