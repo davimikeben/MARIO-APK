@@ -28,6 +28,7 @@ static ANativeWindow*  g_window = nullptr;
 
 extern "C" {
 
+// Callbacks de saída (core → frontend). Repassados ao core via retro_set_* em init.
 static void video_refresh(const void* data, unsigned w, unsigned h, size_t pitch) {
     if (g_renderer) g_renderer->submitFrame(data, w, h, pitch);
 }
@@ -39,15 +40,8 @@ static size_t audio_batch(const int16_t* data, size_t frames) {
     return frames;
 }
 static int16_t input_state(unsigned port, unsigned device, unsigned index, unsigned id) {
-    // Polling via setInput — valores cacheados em LibretroDlopen.
+    // Consulta ao cache preenchido por nativeSetInput/nativeSetInputState
     return g_core ? g_core->pollInput(port, device, index, id) : 0;
-}
-static void environment_set_frame_time(retro_usec_t) {}
-static bool environment(unsigned cmd, void* data) {
-    if (!g_core) return false;
-    return g_core->handleEnvironment(cmd, data,
-        video_refresh, audio_sample, audio_batch, input_state,
-        environment_set_frame_time);
 }
 
 JNIEXPORT jint JNICALL
@@ -60,8 +54,8 @@ Java_com_davimikeben_sm64emulator_core_LibretroBridge_nativeInit(
     const char* saveDir  = env->GetStringUTFChars(saveDirJ,  nullptr);
     g_core = new LibretroDlopen();
     int rc = g_core->init(corePath, sysDir, saveDir,
-        environment, video_refresh, audio_sample, audio_batch, input_state,
-        environment_set_frame_time);
+        nullptr /* environment agora é interno */, video_refresh,
+        audio_sample, audio_batch, input_state, nullptr);
     LOGI("nativeInit core=%s rc=%d", corePath, rc);
     env->ReleaseStringUTFChars(corePathJ, corePath);
     env->ReleaseStringUTFChars(sysDirJ,   sysDir);

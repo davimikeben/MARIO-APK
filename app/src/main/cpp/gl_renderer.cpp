@@ -38,9 +38,11 @@ struct GLRenderer::Impl {
     EGLConfig  config  = nullptr;
     GLuint program = 0, vao = 0, vbo = 0, tex = 0;
     GLsizei texW = 0, texH = 0;
-    GLint  pixelFormat = 0; // 0=0RGB1555,1=XRGB8888,2=RGB565
-    int qualityMode = 1;    // 0=performance 1=balanced 2=quality
+    GLint  pixelFormat = -1; // 0=0RGB1555,1=XRGB8888,2=RGB565,-1=unknown
+    int qualityMode = 1;     // 0=performance 1=balanced 2=quality
     bool initedGL = false;
+    bool hwRender = false;   // true se core ativou SET_HW_RENDER
+    std::vector<uint16_t> convBuf; // buffer de conversão 0RGB1555→RGB565
 
     ~Impl() { destroyGL(); }
 
@@ -136,14 +138,57 @@ void GLRenderer::setWindow(ANativeWindow* w) {
 
 void GLRenderer::setQualityMode(int mode) { pImpl->qualityMode = mode; }
 
+void GLRenderer::setHwRender(bool hw) { pImpl->hwRender = hw; }
+
 void GLRenderer::submitFrame(const void* data, unsigned w, unsigned h, size_t pitch) {
-    if (!pImpl->initedGL || !data) return;
+    if (!pImpl->initedGL) return;
+
+    // ===== MODO HW RENDER =====
+    // O core (mupen64plus_next_gles3) desenha DIRETO no framebuffer default.
+    // O callback de vídeo só precisa fazer swap (ou é ignorado se RETRO_HW_FRAME_BUFFER_VALID).
+    if (pImpl->hwRender) {
+        // data == (void*)-1 => RETRO_HW_FRAME_BUFFER_VALID (core já desenhou no FB)
+        // Swap para apresentar. Não usa textura/software path.
+        eglSwapBuffers(pImpl->display, pImpl->surface);
+        return;
+    }
+
+    // ===== MODO SOFTWARE (fallback) =====
+    if (!data) return;
+
     GLint internalFmt, fmt, type;
     switch (pImpl->pixelFormat) {
         case 2: internalFmt = GL_RGB565;  fmt = GL_RGB;  type = GL_UNSIGNED_SHORT_5_6_5; break;
         case 1: internalFmt = GL_RGBA8;   fmt = GL_RGBA; type = GL_UNSIGNED_BYTE; break;
-        default: internalFmt = GL_RGBA8;  fmt = GL_RGBA; type = GL_UNSIGNED_SHORT_4_4_4_4; break;
+        default: internalFmt = GL_RGB565; fmt = GL_RGB;  type = GL_UNSIGNED_SHORT_5_6_5; break;
     }
+
+    // 0RGB1555 (formato 0): converte para RGB565 em buffer temporário —
+    // GLES3 não aceita upload 1_5_5_5_REV diretamente.
+    if (pImpl->pixelFormat == 0 || pImpl->pixelFormat == -1) {
+        const uint16_t* src = (const uint16_t*)data;
+        size_t px = (size_t)w * h;
+        pImpl->convBuf.resize(px);
+        uint16_t* dst = pImpl->convBuf.data();
+        size_t rowPixels = pitch / 2;
+        for (unsigned y = 0; y < h; ++y) {
+            const uint16_t* row = src + (size_t)y * rowPixels;
+            uint16_t* drow = dst + (size_t)y * w;
+            for (unsigned x = 0; x < w; ++x) {
+                uint16_t v = row[x];
+                // 0RGB1555: X RRRRR GGGGG BBBBB → RGB565: RRRRR GGGGGG BBBBB
+                uint16_t r5 = (v >> 10) & 0x1F;
+                uint16_t g5 = (v >> 5)  & 0x1F;
+                uint16_t b5 =  v        & 0x1F;
+                uint16_t g6 = (g5 << 1) | (g5 >> 4);
+                drow[x] = (uint16_t)((r5 << 11) | (g6 << 5) | b5);
+            }
+        }
+        internalFmt = GL_RGB565; fmt = GL_RGB; type = GL_UNSIGNED_SHORT_5_6_5;
+        data = pImpl->convBuf.data();
+        pitch = (size_t)w * 2;
+    }
+
     // Recria textura apenas se mudou tamanho.
     if ((GLsizei)w != pImpl->texW || (GLsizei)h != pImpl->texH) {
         glBindTexture(GL_TEXTURE_2D, pImpl->tex);

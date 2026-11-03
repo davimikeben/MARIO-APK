@@ -10,6 +10,7 @@ public:
     ~GLRenderer();
     void setWindow(ANativeWindow* w);
     void setQualityMode(int mode);
+    void setHwRender(bool hw);
     void submitFrame(const void* data, unsigned w, unsigned h, size_t pitch);
     static size_t bytesPerPixel(int fmt);
 private:
