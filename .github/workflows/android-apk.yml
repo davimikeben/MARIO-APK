@@ -1,0 +1,85 @@
+name: Android APK build and ROM verification
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [feat/extreme-n64]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK, NDK, and CMake
+        run: |
+          sdkmanager --install \
+            "platforms;android-34" \
+            "build-tools;34.0.0" \
+            "ndk;26.1.10909125" \
+            "cmake;3.22.1"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.2.1'
+          cache-provider: basic
+
+      - name: Build release APK
+        run: gradle --no-daemon :app:assembleRelease
+
+      - name: Verify ROM inside APK
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import os
+          import zipfile
+
+          rom_path = "app/src/main/assets/rom/Super Mario 64 (USA).z64"
+          apk_path = "app/build/outputs/apk/release/app-release.apk"
+          apk_entry = "assets/rom/Super Mario 64 (USA).z64"
+
+          if not os.path.isfile(rom_path) or os.path.getsize(rom_path) == 0:
+              raise SystemExit("ROM source asset is missing or empty")
+          if not os.path.isfile(apk_path):
+              raise SystemExit("Release APK was not produced")
+
+          with open(rom_path, "rb") as source:
+              original = source.read()
+          with zipfile.ZipFile(apk_path, "r") as apk:
+              packaged = apk.read(apk_entry)
+
+          source_hash = hashlib.sha256(original).hexdigest()
+          packaged_hash = hashlib.sha256(packaged).hexdigest()
+          if original != packaged:
+              raise SystemExit("ROM in APK differs from source asset")
+
+          print(f"ROM path: {apk_entry}")
+          print(f"ROM bytes: {len(packaged)}")
+          print(f"ROM SHA-256: {packaged_hash}")
+          print(f"APK bytes: {os.path.getsize(apk_path)}")
+          with open(apk_path, "rb") as built_apk:
+              print(f"APK SHA-256: {hashlib.sha256(built_apk.read()).hexdigest()}")
+          PY
+
+      - name: Upload installable APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: extreme-n64-release-apk
+          path: app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
