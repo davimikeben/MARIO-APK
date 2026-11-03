@@ -3,8 +3,6 @@ name: Android APK build and ROM verification
 on:
   pull_request:
     branches: [main]
-  push:
-    branches: [feat/extreme-n64]
   workflow_dispatch:
 
 permissions:
@@ -25,6 +23,8 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
 
       - name: Install Android SDK, NDK, and CMake
         run: |
