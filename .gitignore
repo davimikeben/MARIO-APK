@@ -1,0 +1,27 @@
+# Build artifacts
+.gradle/
+build/
+app/build/
+.cxx/
+.externalNativeBuild/
+local.properties
+*.iml
+.idea/
+captures/
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# JDK / SDK paths
+/home/z/jdk/
+/home/z/android-sdk/
+
+# Token — NUNCA commitar
+*.token
+.env
+GH_TOKEN
+
+# OS
+.DS_Store
+Thumbs.db

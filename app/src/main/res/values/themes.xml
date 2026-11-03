@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Sm64Emulator" parent="Theme.MaterialComponents.NoActionBar">
+        <item name="colorPrimary">#3B82F6</item>
+        <item name="colorPrimaryDark">#1E40AF</item>
+        <item name="colorAccent">#F59E0B</item>
+        <item name="android:statusBarColor">#1E1B4B</item>
+        <item name="android:windowBackground">@drawable/bg_menu_gradient</item>
+    </style>
+    <style name="Theme.Sm64Emulator.Game" parent="Theme.Sm64Emulator">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
+</resources>

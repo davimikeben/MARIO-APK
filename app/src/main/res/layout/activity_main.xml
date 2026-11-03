@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_menu_gradient"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="SUPER MARIO 64"
+            android:textAlignment="center"
+            android:textColor="#FFFFFF"
+            android:textSize="42sp"
+            android:textStyle="bold"
+            android:shadowColor="#000000"
+            android:shadowDx="2"
+            android:shadowDy="2"
+            android:shadowRadius="4" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="EMULADOR ANDROID — davimikeben build"
+            android:textAlignment="center"
+            android:textColor="#FFD700"
+            android:textSize="14sp"
+            android:layout_marginBottom="16dp" />
+
+        <Button
+            android:id="@+id/btnPlay"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:text="▶️ PLAY"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:backgroundTint="#22C55E"
+            android:textColor="#FFFFFF"
+            android:layout_marginBottom="8dp" />
+
+        <GridLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="2"
+            android:rowCount="4"
+            android:useDefaultMargins="true">
+
+            <Button android:id="@+id/btnKeyboard"   android:text="🎮 Teclado"        android:backgroundTint="#3B82F6" android:textColor="#FFFFFF"/>
+            <Button android:id="@+id/btnPerformance" android:text="⚡ Desempenho"     android:backgroundTint="#F59E0B" android:textColor="#FFFFFF"/>
+            <Button android:id="@+id/btnGraphics"    android:text="🎨 Gráficos"       android:backgroundTint="#A21CAF" android:textColor="#FFFFFF"/>
+            <Button android:id="@+id/btnAudio"       android:text="🔊 Áudio"          android:backgroundTint="#EC4899" android:textColor="#FFFFFF"/>
+            <Button android:id="@+id/btnScreen"      android:text="📱 Tela"           android:backgroundTint="#06B6D4" android:textColor="#FFFFFF"/>
+            <Button android:id="@+id/btnMonitor"     android:text="📊 Monitoramento"  android:backgroundTint="#10B981" android:textColor="#FFFFFF"/>
+            <Button android:id="@+id/btnSave"        android:text="💾 Salvar config"  android:backgroundTint="#475569" android:textColor="#FFFFFF"/>
+            <Button android:id="@+id/btnRestore"     android:text="🔄 Restaurar"      android:backgroundTint="#475569" android:textColor="#FFFFFF"/>
+        </GridLayout>
+
+        <Button
+            android:id="@+id/btnVerifyRom"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🔍 Verificar ROM integrada"
+            android:layout_marginTop="8dp"
+            android:backgroundTint="#1E40AF"
+            android:textColor="#FFFFFF" />
+
+        <TextView
+            android:id="@+id/deviceInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:padding="12dp"
+            android:background="#33000000"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:fontFamily="monospace" />
+
+        <TextView
+            android:id="@+id/romInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:padding="12dp"
+            android:background="#33000000"
+            android:textColor="#00FF66"
+            android:textSize="12sp"
+            android:fontFamily="monospace" />
+    </LinearLayout>
+</ScrollView>
