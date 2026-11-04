@@ -35,6 +35,7 @@ class LibretroBridge {
         @JvmStatic external fun nativeSetAudioSampleRate(rate: Int)
         @JvmStatic external fun nativeGetCoreName(): String
         @JvmStatic external fun nativeGetCoreVersion(): String
+        @JvmStatic external fun nativeGetInitError(): String
         @JvmStatic external fun nativeSaveState(slot: Int): Int
         @JvmStatic external fun nativeLoadState(slot: Int): Int
         @JvmStatic external fun nativeGetRegion(): Int

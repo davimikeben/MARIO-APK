@@ -11,8 +11,8 @@ android {
         applicationId = "com.davimikeben.sm64emulator"
         minSdk = 26  // Mali-G52 phones are all Android 8.0+ — adaptive icons OK
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.2.0"
         ndk {
             abiFilters += listOf("arm64-v8a")
         }
@@ -45,7 +45,11 @@ android {
 
     packaging {
         jniLibs {
-            useLegacyPackaging = false
+            // CRÍTICO v1.2.0: useLegacyPackaging=true (extractNativeLibs=true).
+            // Com false, os .so NÃO são extraídos p/ nativeLibraryDir e o
+            // dlopen do core libretro falha (nativeInit rc=-1). Corrige
+            // "O pacote parece ser inválido" e a inicialização do emulador.
+            useLegacyPackaging = true
         }
         resources {
             excludes += setOf(

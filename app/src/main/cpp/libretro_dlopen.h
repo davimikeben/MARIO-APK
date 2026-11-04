@@ -54,6 +54,8 @@ public:
     const char* coreName() const;
     const char* coreVersion() const;
     int  region() const;
+    // Última mensagem de erro (dlopen/dlsym) p/ diagnóstico no app
+    const char* lastError() const;
 
     // Impl definido no .cpp; público para permitir acesso dos callbacks C estáticos
     struct Impl;

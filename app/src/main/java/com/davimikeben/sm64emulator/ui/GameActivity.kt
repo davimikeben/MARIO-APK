@@ -1,6 +1,7 @@
 package com.davimikeben.sm64emulator.ui
 
 import android.os.Bundle
+import android.util.Log
 import android.view.SurfaceHolder
 import android.view.WindowManager
 import android.widget.Toast
@@ -11,6 +12,7 @@ import com.davimikeben.sm64emulator.databinding.ActivityGameBinding
 import com.davimikeben.sm64emulator.input.VirtualKeyboardView
 import com.davimikeben.sm64emulator.perf.PerfManager
 import com.davimikeben.sm64emulator.util.SettingsManager
+import java.io.File
 
 /**
  * Activity do jogo. Carrega ROM, inicializa core, renderiza, captura input.
@@ -25,6 +27,40 @@ import com.davimikeben.sm64emulator.util.SettingsManager
 class GameActivity : AppCompatActivity() {
     private lateinit var binding: ActivityGameBinding
     private val runtime by lazy { EmulatorRuntime.get(applicationContext) }
+
+    companion object {
+        private const val TAG = "GameActivity"
+        private const val CORE_LIB = "libretro_mupen64plus_next.so"
+    }
+
+    /**
+     * v1.2.0: resolução robusta do path do core libretro.
+     * 1) nativeLibraryDir (com useLegacyPackaging=true os .so são extraídos para cá);
+     * 2) fallback: extrai do APK p/ filesDir/core (só funciona em Android ≤ 9);
+     * 3) último recurso: path esperado — o dlopen vai falhar com dlerror claro.
+     */
+    private fun resolveCorePath(): String {
+        val dir = applicationInfo.nativeLibraryDir
+        File(dir, CORE_LIB).takeIf { it.exists() && it.length() > 0 }?.let {
+            Log.i(TAG, "Core encontrado em nativeLibraryDir: ${it.absolutePath}")
+            return it.absolutePath
+        }
+        try {
+            val dst = File(File(filesDir, "core"), CORE_LIB)
+            if (!dst.exists() || dst.length() == 0L) {
+                java.util.zip.ZipFile(applicationInfo.sourceDir).use { zip ->
+                    val entry = zip.getEntry("lib/arm64-v8a/$CORE_LIB")
+                        ?: throw IllegalStateException("$CORE_LIB ausente no APK")
+                    zip.getInputStream(entry).use { ins -> dst.outputStream().use { ins.copyTo(it) } }
+                }
+            }
+            Log.w(TAG, "Core extraído do APK para ${dst.absolutePath} (fallback)")
+            return dst.absolutePath
+        } catch (t: Throwable) {
+            Log.e(TAG, "Fallback de extração falhou", t)
+            return "$dir/$CORE_LIB"
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,8 +78,9 @@ class GameActivity : AppCompatActivity() {
                 override fun onButton(buttonId: Int, pressed: Boolean) {
                     runtime.setInput(buttonId, if (pressed) 1 else 0)
                 }
-                override fun onAnalog(axis: Int, value: Float) {
-                    runtime.setInputState(LibretroConstants.RETRO_DEVICE_ANALOG, axis / 2, axis % 2, (value * 32767).toInt())
+                override fun onAnalog(stick: Int, axis: Int, value: Float) {
+                    // stick 0=esquerdo (N64 Control Stick), 1=direito (C-Left/C-Down)
+                    runtime.setInputState(LibretroConstants.RETRO_DEVICE_ANALOG, stick, axis, (value * 32767).toInt())
                 }
             }
         }
@@ -63,7 +100,7 @@ class GameActivity : AppCompatActivity() {
         // Configura Surface
         binding.gameSurface.holder.addCallback(object : SurfaceHolder.Callback {
             override fun surfaceCreated(holder: SurfaceHolder) {
-                val corePath = applicationInfo.nativeLibraryDir + "/libretro_mupen64plus_next.so"
+                val corePath = resolveCorePath()
                 runtime.start(corePath, holder.surface,
                     onReady = {
                         runtime.setPerformanceMode(SettingsManager.performanceMode)
@@ -89,6 +126,7 @@ class GameActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        binding.keyboardView.releaseAll()
         runtime.pauseLoop()
     }
 

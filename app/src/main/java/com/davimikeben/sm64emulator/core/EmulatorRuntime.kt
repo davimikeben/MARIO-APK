@@ -39,7 +39,10 @@ class EmulatorRuntime private constructor(private val context: Context) {
                 val saveDir = File(context.filesDir, "saves").apply { mkdirs() }.absolutePath
 
                 val rc = LibretroBridge.nativeInit(corePath, systemDir, saveDir)
-                if (rc != 0) throw RuntimeException("nativeInit rc=$rc")
+                if (rc != 0) {
+                    val detail = try { LibretroBridge.nativeGetInitError() } catch (t: Throwable) { "" }
+                    throw RuntimeException("nativeInit rc=$rc — $detail (core=$corePath)")
+                }
                 LibretroBridge.nativeSetSurface(surface)
                 LibretroBridge.nativeSetAudioSampleRate(44100)
 

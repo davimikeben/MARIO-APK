@@ -222,6 +222,7 @@ struct LibretroDlopen::Impl {
     InputCache input;
     EnvContext env;
     std::string coreName, coreVersion;
+    std::string lastError;
     std::vector<uint8_t> stateBuffer;
     std::vector<uint8_t> romBuffer; // bytes da ROM quando need_fullpath=0
 };
@@ -286,25 +287,14 @@ static bool core_environment(unsigned cmd, void* data) {
             if (data) *(const char**)data = P.env.saveDir.c_str();
             return true;
 
-        case RETRO_ENVIRONMENT_GET_VARIABLE: {      // 15 — responde configurações
+        case RETRO_ENVIRONMENT_GET_VARIABLE: {      // 15 — usa DEFAULTS do core
             if (!data) return false;
             retro_variable* var = (retro_variable*)data;
-            LOGI("GET_VARIABLE: %s", var->key ? var->key : "(null)");
-            // Responde com plugin de vídeo por SOFTWARE quando o core pedir:
-            // permite que o jogo emule headless (sem GL) e no Android funcione
-            // como fallback se SET_HW_RENDER não for aceito.
-            if (var->key) {
-                // Combo por software: RDP angrylion + RSP cxd4 (par clássico).
-                if (strcmp(var->key, "mupen64plus-rdp-plugin") == 0) {
-                    var->value = "angrylion";
-                    return true;
-                }
-                if (strcmp(var->key, "mupen64plus-rsp-plugin") == 0) {
-                    var->value = "cxd4";
-                    return true;
-                }
-            }
-            return false; // demais chaves: usa default do core
+            LOGI("GET_VARIABLE: %s (usando default do core)", var->key ? var->key : "(null)");
+            // v1.2.0 CORREÇÃO CRÍTICA: NÃO forçar angrylion/cxd4.
+            // O core gles3 usa GLideN64 (default) com HW render — forçar angrylion
+            // (plugin SW) quebra a renderização e pode nem existir nesta variante.
+            return false; // responde false → core aplica seus defaults
         }
 
         case RETRO_ENVIRONMENT_SET_VARIABLES: {     // 16 — loga opções oferecidas
@@ -358,8 +348,14 @@ static bool core_environment(unsigned cmd, void* data) {
             return false;
         }
 
-        case RETRO_ENVIRONMENT_GET_LOG_INTERFACE:  // 27 — false: core imprime no stdout
-            return false;
+        case RETRO_ENVIRONMENT_GET_LOG_INTERFACE: { // 27 — logs do core no logcat
+            if (data) {
+                auto* logCb = (retro_log_printf*)data;
+                logCb->log = &LibretroDlopen::coreLogThunk;
+                logCb->userdata = nullptr;
+            }
+            return true;
+        }
 
         case RETRO_ENVIRONMENT_GET_INPUT_BITMASKS:  // 51 — não suportado
             return false;
@@ -470,8 +466,16 @@ int LibretroDlopen::init(const char* corePath, const char* sysDir, const char* s
     pImpl->env.inputCb = icb;
 
     pImpl->sym.handle = dlopen(corePath, RTLD_NOW | RTLD_LOCAL);
-    if (!pImpl->sym.handle) { LOGE("dlopen(%s) falhou: %s", corePath, dlerror()); return -1; }
-    if (!resolveAll(pImpl->sym.handle, pImpl->sym)) return -2;
+    if (!pImpl->sym.handle) {
+        const char* err = dlerror();
+        pImpl->lastError = std::string("dlopen falhou: ") + (err ? err : "erro desconhecido");
+        LOGE("dlopen(%s) falhou: %s", corePath, pImpl->lastError.c_str());
+        return -1;
+    }
+    if (!resolveAll(pImpl->sym.handle, pImpl->sym)) {
+        pImpl->lastError = "dlsym falhou: core nao expõe todos os simbolos retro_*";
+        return -2;
+    }
 
     retro_system_info info{};
     pImpl->sym.get_system_info(&info);
@@ -602,6 +606,7 @@ bool LibretroDlopen::isHwRenderActive() const { return pImpl->env.hwRenderActive
 const char* LibretroDlopen::coreName() const { return pImpl->coreName.c_str(); }
 const char* LibretroDlopen::coreVersion() const { return pImpl->coreVersion.c_str(); }
 int LibretroDlopen::region() const { return pImpl->sym.get_region ? (int)pImpl->sym.get_region() : 0; }
+const char* LibretroDlopen::lastError() const { return pImpl->lastError.c_str(); }
 
 int LibretroDlopen::saveState(int slot) {
     if (!pImpl->sym.serialize_size || !pImpl->sym.serialize) return -1;

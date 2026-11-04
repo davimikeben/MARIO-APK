@@ -76,6 +76,9 @@ Java_com_davimikeben_sm64emulator_core_LibretroBridge_nativeLoadRom(
     int rc = g_core->loadRom(romPath);
     LOGI("nativeLoadRom path=%s rc=%d", romPath, rc);
     env->ReleaseStringUTFChars(romPathJ, romPath);
+    // v1.2.0: após retro_load_game o core negocia SET_HW_RENDER —
+    // informa ao renderer para usar o caminho HW (swap direto) em vez do SW.
+    if (rc == 0 && g_renderer && g_core) g_renderer->setHwRender(g_core->isHwRenderActive());
     return rc;
 }
 
@@ -83,6 +86,9 @@ JNIEXPORT jint JNICALL
 Java_com_davimikeben_sm64emulator_core_LibretroBridge_nativeRunFrame(JNIEnv*, jclass) {
     if (!g_core) return -1;
     if (g_pacer) g_pacer->beginFrame();
+    // v1.2.0 CRÍTICO: contexto GL é por-thread — garante current aqui,
+    // na MESMA thread que executa retro_run (senão tela preta).
+    if (g_renderer) g_renderer->ensureCurrent();
     g_core->run();
     if (g_pacer) g_pacer->endFrame();
     return 0;
@@ -162,6 +168,12 @@ Java_com_davimikeben_sm64emulator_core_LibretroBridge_nativeSetAudioSampleRate(
 JNIEXPORT jstring JNICALL
 Java_com_davimikeben_sm64emulator_core_LibretroBridge_nativeGetCoreName(JNIEnv* env, jclass) {
     return env->NewStringUTF(g_core ? g_core->coreName() : "unknown");
+}
+
+// v1.2.0: diagnóstico — repassa dlerror/dlsym para o Kotlin exibir ao usuário
+JNIEXPORT jstring JNICALL
+Java_com_davimikeben_sm64emulator_core_LibretroBridge_nativeGetInitError(JNIEnv* env, jclass) {
+    return env->NewStringUTF(g_core ? g_core->lastError() : "core não inicializado");
 }
 JNIEXPORT jstring JNICALL
 Java_com_davimikeben_sm64emulator_core_LibretroBridge_nativeGetCoreVersion(JNIEnv* env, jclass) {

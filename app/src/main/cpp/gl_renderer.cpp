@@ -12,6 +12,8 @@
 #include <android/native_window_jni.h>
 #include <cstring>
 #include <vector>
+#include <thread>
+#include <unistd.h>
 
 #define LOG_TAG "gl_renderer"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO,  LOG_TAG, __VA_ARGS__)
@@ -42,6 +44,7 @@ struct GLRenderer::Impl {
     int qualityMode = 1;     // 0=performance 1=balanced 2=quality
     bool initedGL = false;
     bool hwRender = false;   // true se core ativou SET_HW_RENDER
+    std::thread::id currentThread{}; // thread com contexto EGL current
     std::vector<uint16_t> convBuf; // buffer de conversão 0RGB1555→RGB565
 
     ~Impl() { destroyGL(); }
@@ -53,17 +56,32 @@ struct GLRenderer::Impl {
         EGLint cfgAttribs[] = {
             EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
             EGL_BLUE_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_RED_SIZE, 8,
-            EGL_DEPTH_SIZE, 0, EGL_STENCIL_SIZE, 0,
+            // v1.2.0: GLideN64 EXIGE depth buffer — sem depth o jogo renderiza
+            // geometria invisível/z-fighting (tela preta ou cenário ausente).
+            EGL_DEPTH_SIZE, 24, EGL_STENCIL_SIZE, 8,
             EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT,
             EGL_NONE
         };
         EGLint num = 0;
         eglChooseConfig(display, cfgAttribs, &config, 1, &num);
-        if (num < 1) { LOGE("eglChooseConfig falhou"); return false; }
-        eglCreateWindowSurface(display, config, window, nullptr);
+        if (num < 1) {
+            // Fallback: alguns drivers Mali não têm 24/8 exato — tenta 16/0
+            EGLint cfgFallback[] = {
+                EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+                EGL_BLUE_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_RED_SIZE, 8,
+                EGL_DEPTH_SIZE, 16, EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT,
+                EGL_NONE
+            };
+            eglChooseConfig(display, cfgFallback, &config, 1, &num);
+            if (num < 1) { LOGE("eglChooseConfig falhou"); return false; }
+        }
+        surface = eglCreateWindowSurface(display, config, window, nullptr);
+        if (surface == EGL_NO_SURFACE) { LOGE("eglCreateWindowSurface falhou: 0x%x", eglGetError()); return false; }
         EGLint ctxAttribs[] = { EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE };
         context = eglCreateContext(display, config, EGL_NO_CONTEXT, ctxAttribs);
+        if (context == EGL_NO_CONTEXT) { LOGE("eglCreateContext falhou: 0x%x", eglGetError()); return false; }
         eglMakeCurrent(display, surface, surface, context);
+        currentThread = std::this_thread::get_id();
 
         program = buildProgram();
         glGenVertexArrays(1, &vao);
@@ -130,6 +148,27 @@ struct GLRenderer::Impl {
 
 GLRenderer::GLRenderer() : pImpl(new Impl) {}
 GLRenderer::~GLRenderer() {}
+
+// v1.2.0 CORREÇÃO CRÍTICA DE THREADING:
+// O contexto EGL é por-thread. O core (retro_run) roda na thread de loop do
+// Kotlin, mas initGL() rodou na thread que chamou nativeSetSurface. Sem o
+// re-bind, TODAS as chamadas GL do core falham → tela preta.
+void GLRenderer::ensureCurrent() {
+    if (!pImpl->initedGL) return;
+    auto tid = std::this_thread::get_id();
+    if (tid == pImpl->currentThread) return; // já está current nesta thread
+    // Contexto pode estar "preso" na thread anterior que ainda não morreu:
+    // tenta algumas vezes antes de desistir.
+    for (int attempt = 0; attempt < 5; ++attempt) {
+        if (eglMakeCurrent(pImpl->display, pImpl->surface, pImpl->surface, pImpl->context)) {
+            pImpl->currentThread = tid;
+            return;
+        }
+        LOGE("eglMakeCurrent falhou (tentativa %d): 0x%x", attempt, eglGetError());
+        usleep(5000);
+    }
+    LOGE("eglMakeCurrent: desistindo após 5 tentativas");
+}
 
 void GLRenderer::setWindow(ANativeWindow* w) {
     pImpl->window = w;
