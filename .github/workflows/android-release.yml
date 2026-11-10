@@ -1,0 +1,116 @@
+name: Android signed release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Build and verify signed APK
+    runs-on: ubuntu-latest
+    environment:
+      name: android-release
+    steps:
+      - name: Check out full history
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # actions/checkout v6
+        with:
+          fetch-depth: 0
+
+      - name: Confirm tag points to main
+        run: |
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+
+      - name: Set up Java
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # actions/setup-java v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # android-actions/setup-android v3
+        with:
+          packages: platform-tools
+
+      - name: Install Android SDK, NDK, and CMake
+        run: |
+          sdkmanager --install \
+            "platforms;android-34" \
+            "build-tools;34.0.0" \
+            "ndk;26.1.10909125" \
+            "cmake;3.22.1"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # gradle/actions v6
+        with:
+          gradle-version: '8.2.1'
+          cache-provider: basic
+
+      - name: Prepare temporary keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          test -n "$ANDROID_KEYSTORE_BASE64" || { echo "Missing Environment secret: ANDROID_KEYSTORE_BASE64" >&2; exit 1; }
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/mario-release.jks"
+          test -s "$RUNNER_TEMP/mario-release.jks"
+          chmod 600 "$RUNNER_TEMP/mario-release.jks"
+          printf 'ANDROID_KEYSTORE_PATH=%s\n' "$RUNNER_TEMP/mario-release.jks" >> "$GITHUB_ENV"
+
+      - name: Build signed release APK
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$ANDROID_KEYSTORE_PASSWORD" || { echo "Missing Environment secret: ANDROID_KEYSTORE_PASSWORD" >&2; exit 1; }
+          test -n "$ANDROID_KEY_ALIAS" || { echo "Missing Environment secret: ANDROID_KEY_ALIAS" >&2; exit 1; }
+          test -n "$ANDROID_KEY_PASSWORD" || { echo "Missing Environment secret: ANDROID_KEY_PASSWORD" >&2; exit 1; }
+          gradle --no-daemon :app:assembleRelease
+
+      - name: Verify APK signature and ROM
+        run: |
+          set -euo pipefail
+          apk="app/build/outputs/apk/release/app-release.apk"
+          "$ANDROID_HOME/build-tools/34.0.0/zipalign" -c -v 4 "$apk"
+          "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose --print-certs "$apk"
+          python3 - <<'PY'
+          import hashlib
+          import os
+          import zipfile
+
+          rom_path = "app/src/main/assets/rom/Super Mario 64 (USA).z64"
+          apk_path = "app/build/outputs/apk/release/app-release.apk"
+          apk_entry = "assets/rom/Super Mario 64 (USA).z64"
+          if not os.path.isfile(rom_path) or not os.path.isfile(apk_path):
+              raise SystemExit("ROM source asset or signed APK is missing")
+          with open(rom_path, "rb") as source:
+              original = source.read()
+          with zipfile.ZipFile(apk_path, "r") as archive:
+              packaged = archive.read(apk_entry)
+          if original != packaged:
+              raise SystemExit("ROM in signed APK differs from source asset")
+          print(f"ROM path: {apk_entry}")
+          print(f"ROM bytes: {len(packaged)}")
+          print(f"ROM SHA-256: {hashlib.sha256(packaged).hexdigest()}")
+          print(f"APK bytes: {os.path.getsize(apk_path)}")
+          with open(apk_path, "rb") as built_apk:
+              print(f"APK SHA-256: {hashlib.sha256(built_apk.read()).hexdigest()}")
+          PY
+
+      - name: Upload signed APK artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # actions/upload-artifact v4
+        with:
+          name: mario-apk-release
+          path: app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Remove temporary keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/mario-release.jks"
