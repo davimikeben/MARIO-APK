@@ -20,10 +20,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Confirm tag points to main
+      - name: Confirm tag points to main and set app version
         run: |
+          set -euo pipefail
           git fetch --no-tags origin main
           git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD
+          tag_version="${GITHUB_REF_NAME#v}"
+          test -n "$tag_version"
+          printf 'ANDROID_VERSION_NAME=%s\n' "$tag_version" >> "$GITHUB_ENV"
+          printf 'ANDROID_VERSION_CODE=%s\n' "$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
 
       - name: Set up Java
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # actions/setup-java v5
