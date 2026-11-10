@@ -3,6 +3,17 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+def releaseVersionName = System.getenv("ANDROID_VERSION_NAME")?.trim()
+def releaseVersionCodeRaw = System.getenv("ANDROID_VERSION_CODE")?.trim()
+if (releaseVersionCodeRaw && !releaseVersionCodeRaw.isInteger()) {
+    throw new GradleException("ANDROID_VERSION_CODE must be an integer")
+}
+def releaseVersionCode = releaseVersionCodeRaw ? releaseVersionCodeRaw.toInteger() : 1
+def appVersionName = (releaseVersionName ?: "1.0").replaceFirst("^v", "")
+if (releaseVersionCode <= 0) {
+    throw new GradleException("ANDROID_VERSION_CODE must be positive")
+}
+
 def releaseSigningKeys = [
     "ANDROID_KEYSTORE_PATH",
     "ANDROID_KEYSTORE_PASSWORD",
@@ -25,8 +36,8 @@ android {
         applicationId "com.davimikeben.extremen64"
         minSdk 24
         targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        versionCode releaseVersionCode
+        versionName appVersionName
 
         ndk {
             abiFilters "arm64-v8a", "armeabi-v7a", "x86_64"
