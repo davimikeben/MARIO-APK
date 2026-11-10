@@ -3,6 +3,19 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+def releaseSigningKeys = [
+    "ANDROID_KEYSTORE_PATH",
+    "ANDROID_KEYSTORE_PASSWORD",
+    "ANDROID_KEY_ALIAS",
+    "ANDROID_KEY_PASSWORD"
+]
+def releaseSigningValues = releaseSigningKeys.collectEntries { key -> [(key): System.getenv(key)] }
+def hasAnyReleaseSigningValue = releaseSigningValues.values().any { it != null && !it.trim().isEmpty() }
+def hasCompleteReleaseSigning = releaseSigningValues.values().every { it != null && !it.trim().isEmpty() }
+if (hasAnyReleaseSigningValue && !hasCompleteReleaseSigning) {
+    throw new GradleException("Release signing requires all ANDROID_KEYSTORE_* environment variables")
+}
+
 android {
     namespace 'com.davimikeben.extremen64'
     compileSdk 34
@@ -33,6 +46,17 @@ android {
         }
     }
 
+    signingConfigs {
+        if (hasCompleteReleaseSigning) {
+            release {
+                storeFile file(releaseSigningValues["ANDROID_KEYSTORE_PATH"])
+                storePassword releaseSigningValues["ANDROID_KEYSTORE_PASSWORD"]
+                keyAlias releaseSigningValues["ANDROID_KEY_ALIAS"]
+                keyPassword releaseSigningValues["ANDROID_KEY_PASSWORD"]
+            }
+        }
+    }
+
     buildTypes {
         debug {
             jniDebuggable false
@@ -41,7 +65,10 @@ android {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.debug
+            // Release builds are signed only when the protected tag workflow injects its secrets.
+            if (hasCompleteReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
             ndk {
                 debugSymbolLevel 'none'
             }
